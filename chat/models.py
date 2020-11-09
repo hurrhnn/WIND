@@ -50,9 +50,6 @@ class UserInfo(AbstractBaseUser):
     def __str__(self):
         return self.UserName
 
-    #def set_password(*args, **kwargs):
-    #    print(args, kwargs)
-
     class Meta:
         db_table = 'userinfo'
         ordering = ['UserId']

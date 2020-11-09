@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import UserInfo
-
+from django.contrib.auth import get_user_model
 
 # Register your models here.
 
@@ -9,4 +8,4 @@ class UserInfoAdmin(admin.ModelAdmin):
         'UserName', 'UserId', 'UserPassword', 'UserStudentId', 'UserDepartment', 'UserStatus', 'UserFavorite')
 
 
-admin.site.register(UserInfo, UserInfoAdmin)
+admin.site.register(get_user_model(), UserInfoAdmin)

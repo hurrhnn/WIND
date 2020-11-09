@@ -1,12 +1,13 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser
 
 class UserAccountManager(BaseUserManager):
     def create_user(self, UserId, UserPassword=None, **extra_fields):
         if not UserId:
             raise ValueError('Email must be set.')
         user = self.model(UserId = UserId, UserPassword = UserPassword, **extra_fields)
+        user.set_password(UserPassword)
         user.save(using=self._db)
         return user
 
@@ -20,7 +21,7 @@ class UserAccountManager(BaseUserManager):
         return self.get(code_number=email_)
 
 
-class UserInfo(models.Model):
+class UserInfo(AbstractBaseUser):
     is_anonymous = False
     is_authenticated = True
 
@@ -48,6 +49,9 @@ class UserInfo(models.Model):
 
     def __str__(self):
         return self.UserName
+
+    #def set_password(*args, **kwargs):
+    #    print(args, kwargs)
 
     class Meta:
         db_table = 'userinfo'

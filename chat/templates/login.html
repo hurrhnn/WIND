@@ -5,37 +5,37 @@
         <meta charset="UTF-8">
         <title>login</title>
         <link rel="stylesheet" href="{% static 'logincss.css' %}">
+        <script type="text/javascript" src="{% static 'fa-eye.js' %}"></script>
         <script src="https://kit.fontawesome.com/64d58efce2.js" crossorigin="anonymous">
             function onkeyup() {
                 if (window.event.keyCode === 13) {
-                    // 엔터키가 눌렸을 때 실행할 내용
                     loginform.submit();
                 }
             }
         </script>
-
-        <script type="text/javascript" src="{% static 'fa-eye.js' %}"></script>
     </head>
     <body>
     <div class="container">
         <div class="signin-signup">
-            <form action="{% url 'dashboard' %}" method="POST" class="sign-in-form" name="loginform">
+            <form method="POST" class="sign-in-form" name="loginform">
                 {% csrf_token %}
                 <h2 class="title">로그인</h2>
-                <div class="input-field">
+                <label for="id" class="input-field">
                     <i class="fas fa-user"></i>
-                    <input type="text" id="id" name="id" required placeholder="아이디">
-                </div>
-                <div class="input-field">
+                    <input type="text" id="id" name="id" required placeholder="아이디"
+                           value="{{ form.id.value | default_if_none:'' }}">
+                </label>
+                <label for="password" class="input-field">
                     <i class="fas fa-lock"></i>
-                    <input type="Password" id="password" name="password" required placeholder="비밀번호">
-                </div>
+                    <input type="Password" id="password" name="password" required placeholder="비밀번호"
+                           value="{{ form.password.value | default_if_none:'' }}">
+                </label>
                 <span>
                 <i class="fa fa-eye" aria-hidden="true" id="eye" onclick="toggle()"></i>
             </span>
                 <input type="submit" value="로그인" class="btn solid" onkeyup="enterkey()">
                 <div id="formFooter">
-                    <a href="{% url 'register_url' %}">회원가입</a>
+                    <a href="{% url 'register' %}">회원가입</a>
                     <br>
                     <a href="{% url 'password_reset' %}">비밀번호를 잃어버리셨나요?</a>
                 </div>

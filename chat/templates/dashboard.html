@@ -1,9 +1,0 @@
-{% extends 'index.html' %}
-
-{% block content %}
-    {% if user.is_authenticated %}
-        <h1>Welcome, {{ user.UserName }}</h1>
-        <a href="{% url 'logout' %}">Logout</a>
-        <a href="{% url 'register' %}">Register</a>
-    {% endif %}
-{% endblock %}

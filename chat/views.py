@@ -20,10 +20,10 @@ def login_view(request):
         user_model = get_user_model()
         login_userid = request.POST.get('id', None)
         login_password = request.POST.get('password', None)
-        user_info = user_model.objects.get(UserId=login_userid)
+        user_info = user_model.objects.get(email=login_userid)
 
 
-        if login_password == user_info.UserPassword:
+        if login_password == user_info.password:
             request.session['user'] = user_info.id
             login(request, user_info)
             return render(request, 'index.html', response_data)

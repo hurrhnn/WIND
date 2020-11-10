@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
-  
+
     def __init__(self, scope):
         # AsyncConsumer doesn't have __init__ thus there shouldn't be any args
         super().__init__()

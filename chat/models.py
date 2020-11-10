@@ -1,6 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
 
 class UserAccountManager(BaseUserManager):
@@ -23,7 +23,7 @@ class UserAccountManager(BaseUserManager):
         return self.get(email=email)
 
 
-class UserInfo(AbstractBaseUser):
+class UserInfo(AbstractBaseUser, PermissionsMixin):
     objects = UserAccountManager()
 
     REQUIRED_FIELDS = ('UserName', 'UserStudentId', 'UserDepartment', 'UserStatus', 'UserFavorite', 'code_number')
@@ -39,11 +39,11 @@ class UserInfo(AbstractBaseUser):
         verbose_name='Department')
     UserProfile = models.ImageField(null=True, blank=True, verbose_name='Profile Image')
 
-    UserStatus = models.BooleanField(null=False, blank=False, verbose_name="I'm board")
-    UserFavorite = models.CharField(max_length=2048, null=True, blank=True, verbose_name='Favorite')
+    UserStatus = models.BooleanField(null=True, blank=True, verbose_name="I'm board", default=False)
+    UserFavorite = models.CharField(max_length=2048, null=False, blank=True, verbose_name='Favorite')
 
-    code_number = models.CharField(max_length=2048)
-    is_staff = models.BooleanField(blank=True, default=False)
+    code_number = models.CharField(max_length=2048, primary_key=True)
+    is_staff = models.BooleanField(default=False)
 
     def __str__(self):
         return self.email

@@ -20,9 +20,9 @@
             <form method="POST" class="sign-in-form" name="loginform">
                 {% csrf_token %}
                 <h2 class="title">로그인</h2>
-                <label for="id" class="input-field">
+                <label for="email" class="input-field">
                     <i class="fas fa-user"></i>
-                    <input type="text" id="id" name="id" required placeholder="아이디"
+                    <input type="text" id="email" name="email" required placeholder="아이디"
                            value="{{ form.id.value | default_if_none:'' }}">
                 </label>
                 <label for="password" class="input-field">

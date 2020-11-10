@@ -1,12 +1,15 @@
-from django.urls import path
+from django.conf.urls import url
 from . import views
 
 
 urlpatterns = [
-    path('', views.index_view, name='index'),
-    path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('login/', views.login_view, name="login"),
-    path('logout/', views.logout_view, name="logout"),
-    path('register/', views.register_view, name="register"),
-    path('found', views.lost_view, name='lostpassword')
+    url(r'^$', views.index_view, name='index'),
+    url(r'^dashboard/', views.dashboard_view, name='dashboard'),
+    url(r'^login/', views.login_view, name="login"),
+    url(r'^logout/', views.logout_view, name="logout"),
+    url(r'^register/', views.register_view, name="register"),
+    url(r'^found', views.lost_view, name='lostpassword'),
+    url(r'^room/(?P<room_name>[^/]+)/$', views.chatroom_view, name='room'),
+    url(r'^room', views.chatroom_index_view, name='index_room'),
+
 ]

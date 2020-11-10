@@ -15,6 +15,27 @@ def index_view(request):
     return render(request, 'index.html')
 
 
+def register_view(request):
+    if request.method == "GET":
+        return render(request, 'registration/register.html')
+
+    elif request.method == "POST":
+        email = request.POST.get('email', None)
+        password = request.POST.get('password', None)
+        nickname = request.POST.get('nickname', None)
+        student_id = request.POST.get('student_id', None)
+        department = request.POST.get('department', None)
+
+        if request.POST.get('quiz', None) != '박승유':
+            return HttpResponse('<script>alert("퀴즈를 틀렸습니다!")\nlocation.replace(window.location.href)</script>')
+
+        user_model = get_user_model()
+        user = user_model(email=email, password=make_password(password), UserName=nickname, UserStudentId=student_id,
+                          UserDepartment=department)
+        user.save()
+        return redirect('login')
+
+
 def login_view(request):
     if request.method == "GET":
         return render(request, 'login.html')
@@ -40,34 +61,13 @@ def logout_view(request):
     return redirect('/')
 
 
-@login_required()
-def dashboard_view(request):
-    return render(request, 'dashboard.html')
-
-
-def register_view(request):
-    if request.method == "GET":
-        return render(request, 'registration/register.html')
-
-    elif request.method == "POST":
-        email = request.POST.get('email', None)
-        password = request.POST.get('password', None)
-        nickname = request.POST.get('nickname', None)
-        student_id = request.POST.get('student_id', None)
-        department = request.POST.get('department', None)
-
-        if request.POST.get('quiz', None) != '박승유':
-            return HttpResponse('<script>alert("퀴즈를 틀렸습니다!")\nlocation.replace(window.location.href)</script>')
-
-        user_model = get_user_model()
-        user = user_model(email=email, password=make_password(password), UserName=nickname, UserStudentId=student_id,
-                          UserDepartment=department)
-        user.save()
-        return redirect('login')
-
-
 def lost_view(request):
     return render(request, 'registration/lostpassword.html')
+
+
+@login_required()
+def profile_view(request):
+    return render(request, 'profile.html')
 
 
 @login_required()

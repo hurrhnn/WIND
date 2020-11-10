@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'chat.apps.ChatConfig'
+    'chat.apps.ChatConfig',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -124,3 +125,14 @@ LOGIN_REDIRECT_URL = '/chat/'
 LOGOUT_REDIRECT_URL = '/chat/login/'
 
 AUTH_USER_MODEL = 'chat.UserInfo'
+
+ASGI_APPLICATION = 'WIND.routing.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}

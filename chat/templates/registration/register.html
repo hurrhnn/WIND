@@ -1,62 +1,89 @@
-{% extends 'index.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <link rel="stylesheet" href="{% static 'registercss.css' %}">
+    <script type="text/javascript" src="{% static 'fa-eye.js' %}"></script>
+    <!------ Include the above in your HEAD tag ---------->
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+</head>
 
-{% block content %}
-    <html lang="en">
-    <head>
-        <link rel="stylesheet" href="{% static 'registercss.css' %}">
-        <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet"
-              id="bootstrap-css">
-        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
-        <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-        <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
-        <title>회원가입</title>
-
-    <body>
-    <div class="container-fluid">
-        <form action="" method="POST" class="register-form">
+<body>
+<script src="https://kit.fontawesome.com/64d58efce2.js" crossorigin="anonymous">
+    function onkeyup() {
+        if (window.event.keyCode === 13) {
+            // 엔터키가 눌렸을 때 실행할 내용
+            registerform.submit();
+        }
+    }
+</script>
+<div class="container-fluid">
+    <form method="POST" class="register-form" name="registerform">
+        {% csrf_token %}
+        <!-- ID, Password, 학과, 학번, 이름 -->
+        <!-- 아이디(이메일) -->
+        <div class="row">
+            <div class="col-md-4 col-sm-4 col-lg-4">
+                <label for="email">아이디</label><br>
+                <input name="email" class="form-control" type="email" placeholder="이메일을 입력하세요" required
+                       style="border-radius: 49px; ">
+            </div>
+        </div>
+        <!-- 비밀번호 -->
+        <div class="row">
+            <div class="col-md-4 col-sm-4 col-lg-4">
+                <label for="password">비밀번호</label><br>
+                <!-- <input name="password" class="form-control"type="PASSWORD" id="password"> -->
+                <input type="password" name="password" class="form-control" placeholder="비밀번호를 입력하세요" required
+                       minlength="6" style="border-radius: 49px;">
+                <span>
+                    <i class="fa fa-eye" aria-hidden="true" id="eye" onclick="toggle()"></i>
+                </span>
+            </div>
+            <!-- 이름 -->
             <div class="row">
                 <div class="col-md-4 col-sm-4 col-lg-4">
-                    <label for="firstName">NAME</label>!
-                    <input name="firstName" class="form-control" type="text">
+                    <label for="nickname">이름</label><br>
+                    <input name="nickname" class="form-control" type="text" placeholder="이름을 입력하세요" required
+                           style="border-radius: 49px;">
                 </div>
             </div>
+            <!-- 학번 -->
             <div class="row">
                 <div class="col-md-4 col-sm-4 col-lg-4">
-                    <label for="email">EMAIL</label>
-                    <input name="email" class="form-control" type="email">
+                    <label for="UserStudentId">학번</label><br>
+                    <input name="student_id" class="form-control" type="number" placeholder="학번을 입력하세요" required
+                           min="10101" maxlength="31299" style="border-radius: 49px;">
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                    <label for="password">PASSWORD</label>
-                    <input name="password" class="form-control" type="password">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                    <label for="password">PASSWORD</label>
-                    <input name="password" class="form-control" type="password">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                    <label for="password">PASSWORD</label>
-                    <input name="password" class="form-control" type="password">
-                </div>
-            </div>
+            <!-- 학과 -->
+            <p style="color: white;">학과</p>
+            <select name="department" required style="height: 40px; width: 430px; border-radius: 49px;">
+                <option value="information">정보보호과</option>
+                <option value="software">소프트웨어과</option>
+                <option value="business">IT경영학과</option>
+                <option value="design">콘텐츠디자인과</option>
+            </select>
             <hr>
+            <!-- 교장선생님성함은 선린인 인증 -->
+            <h1>QUIZ</h1>
             <div class="row">
-                <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
-                    <button class="btn btn-default regbutton">Register</button>
-
-                </div>
-                <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
-                    <button class="btn btn-default logbutton">Sign up</button>
+                <div class="col-md-4 col-sm-4 col-lg-4">
+                    <label for="quiz">정보보호과 학과장 선생님의 성함은?</label><br>
+                    <input name="quiz" class="form-control" type="text" style="border-radius: 49px;">
                 </div>
             </div>
-        </form>
-    </div>
-    </body>
-    </html>
-{% endblock %}
+            <!-- 회원가입 버튼 -->
+            <div class="row">
+                <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
+                    <button class="btn btn-default regbutton" onkeyup="enterkey()">회원가입</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>

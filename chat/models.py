@@ -2,40 +2,35 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 
+
 class UserAccountManager(BaseUserManager):
-    def create_user(self, UserId, UserPassword=None, **extra_fields):
-        if not UserId:
+    def create_user(self, email, password=None, **kwargs):
+        if not email:
             raise ValueError('Email must be set.')
-        user = self.model(UserId = UserId, UserPassword = UserPassword, **extra_fields)
-        user.set_password(UserPassword)
+        user = self.model(email=self.normalize_email(email), password=password, **kwargs)
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, UserId, UserPassword, **extra_fields):
-        superuser = self.create_user(UserId, UserPassword, **extra_fields)
-        superuser.is_admin = True
+    def create_superuser(self, email, password, **kwargs):
+        superuser = self.create_user(email, password, **kwargs)
+        superuser.is_staff = True
+        superuser.is_superuser = True
         superuser.save(using=self._db)
         return superuser
 
-    def get_by_natural_key(self, email_):
-        return self.get(code_number=email_)
+    def get_by_natural_key(self, email):
+        return self.get(email=email)
 
 
 class UserInfo(AbstractBaseUser):
-    is_anonymous = False
-    is_authenticated = True
-
     objects = UserAccountManager()
-    code_number = models.CharField(max_length=100, unique=True)
 
-    REQUIRED_FIELDS = (
-        'UserPassword', 'UserName', 'UserStudentId', 'UserDepartment', 'UserStatus', 'UserFavorite',
-        'code_number')
-    USERNAME_FIELD = 'UserId'
+    REQUIRED_FIELDS = ('UserName', 'UserStudentId', 'UserDepartment', 'UserStatus', 'UserFavorite', 'code_number')
+    USERNAME_FIELD = 'email'
 
     UserName = models.CharField(max_length=10, null=False, blank=False, verbose_name='Name')
-    UserId = models.EmailField(max_length=50, null=False, blank=False, verbose_name='ID', unique=True)
-    UserPassword = models.CharField(max_length=24, null=False, blank=False, verbose_name='Password')
+    email = models.EmailField(max_length=50, null=False, blank=False, verbose_name='ID', unique=True)
 
     UserStudentId = models.PositiveSmallIntegerField(null=False, blank=False, verbose_name='Student ID')
     UserDepartment = models.CharField(
@@ -47,9 +42,18 @@ class UserInfo(AbstractBaseUser):
     UserStatus = models.BooleanField(null=False, blank=False, verbose_name="I'm board")
     UserFavorite = models.CharField(max_length=2048, null=True, blank=True, verbose_name='Favorite')
 
+    code_number = models.CharField(max_length=2048)
+    is_staff = models.BooleanField(blank=True, default=False)
+
     def __str__(self):
-        return self.UserName
+        return self.email
+
+    def get_short_name(self):
+        return self.email
+
+    def natural_key(self):
+        return self.email
 
     class Meta:
         db_table = 'userinfo'
-        ordering = ['UserId']
+        ordering = ['email']

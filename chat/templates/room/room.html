@@ -1,48 +1,210 @@
-<!-- chat/templates/chat/room.html -->
+{% load static %}
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<!------ Include the above in your HEAD tag ---------->
+
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<!------ Include the above in your HEAD tag ---------->
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
     <title>Chat Room</title>
+    <script>
+        let chatSocket = new WebSocket(
+            'wss://' + window.location.host +
+            '/ws/chat/room/' + {{ room_name }} +'/');
+    </script>
+    <meta charset='UTF-8'>
+    <meta name="robots" content="noindex">
+    <link rel="shortcut icon" type="image/x-icon"
+          href="//production-assets.codepen.io/assets/favicon/favicon-8ea04875e70c4b0bb41da869e81236e54394d63638a1ef12fa558a4a835f1164.ico"/>
+    <link rel="mask-icon" type=""
+          href="//production-assets.codepen.io/assets/favicon/logo-pin-f2d2b6d2c61838f7e76325261b7195c27224080bc099486ddd6dccb469b8e8e6.svg"
+          color="#111"/>
+    <link rel="canonical" href="https://codepen.io/emilcarlsson/pen/ZOQZaV?limit=all&page=74&q=contact+"/>
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,600,700,300' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel='stylesheet prefetch' href='https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css'>
+    <link rel='stylesheet prefetch'
+          href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.2/css/font-awesome.min.css'>
+    <link class="cp-pen-styles" rel="stylesheet" href="{% static 'roomcss.css' %}">
+    <style>a {
+        text-decoration: none;
+        color: #ffffff
+    }</style>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+            integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+            integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+            crossorigin="anonymous"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 </head>
-
 <body>
-<textarea id="chat-log" cols="100" rows="20"></textarea><br/>
-<input id="chat-message-input" type="text" size="100"/><br/>
-<input id="chat-message-submit" type="button" value="Send"/>
-</body>
 
-<script>
-    let chatSocket = new WebSocket(
-        'ws://' + window.location.host +
-        '/ws/chat/room/' + {{ room_name }} +'/');
+<div id="frame">
+    <div id="sidepanel">
+        <div id="profile">
+            <div class="wrap">
+                <img id="profile-img" src="http://emilcarlsson.se/assets/mikeross.png" class="online" alt=""/>
+                <p><a href="{% url 'profile' %}">{{ user.UserName }}</a></p>
+                <div id="status-options">
+                    <ul>
+                        <li id="status-online" class="active"><span class="status-circle"></span>
+                            <p>Online</p></li>
+                        <li id="status-away"><span class="status-circle"></span>
+                            <p>Away</p></li>
+                        <li id="status-busy"><span class="status-circle"></span>
+                            <p>Busy</p></li>
+                        <li id="status-offline"><span class="status-circle"></span>
+                            <p>Offline</p></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div id="search">
+            <label for=""><i class="fa fa-search" aria-hidden="true"></i></label>
+            <input type="text" placeholder="Search contacts..."/>
+        </div>
+        <div id="contacts">
+            <ul>
+                <li class="contact active">
+                    <div class="wrap">
+                        <span class="contact-status busy"></span>
+                        <img src="http://emilcarlsson.se/assets/harveyspecter.png" alt=""/>
+                        <div class="meta">
+                            <p class="name">Harvey Specter</p>
+                            <p class="preview">Wrong. You take the gun, or you pull out a bigger one. Or, you call their
+                                bluff. Or, you do any one of a hundred and forty six other things.</p>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div id="bottom-bar">
+            <button id="addcontact"><i class="fa fa-user-plus fa-fw" aria-hidden="true"></i> <span>Add contact</span>
+            </button>
+            <button id="settings"><i class="fa fa-cog fa-fw" aria-hidden="true"></i> <span>Settings</span></button>
+        </div>
+    </div>
+    <div class="content">
+        <div class="contact-profile">
+            <img src="http://emilcarlsson.se/assets/harveyspecter.png" alt=""/>
+            <p>Harvey Specter</p>
+            <div class="social-media">
+                <i class="fa fa-facebook" aria-hidden="true"></i>
+                <i class="fa fa-twitter" aria-hidden="true"></i>
+                <i class="fa fa-instagram" aria-hidden="true"></i>
+            </div>
+        </div>
+        <div class="messages" style="overflow:auto">
+            <ul>
 
-    chatSocket.onmessage = function (e) {
-        const data = JSON.parse(e.data);
-        const message = data['message'];
-        document.querySelector('#chat-log').value += (message + '\n');
-    };
+            </ul>
+        </div>
+        <div class="message-input">
+            <div class="wrap">
+                <input type="text" id="send_message" autofocus placeholder="Write your message..."/>
+                <i class="fa fa-paperclip attachment" aria-hidden="true"></i>
+                <button class="submit"><i class="fa fa-paper-plane" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src='//production-assets.codepen.io/assets/common/stopExecutionOnTimeout-b2a7b3fe212eaa732349046d8416e00a9dec26eb7fd347590fbced3ab38af52e.js'></script>
+<script src='https://code.jquery.com/jquery-2.2.4.min.js'></script>
+<script>document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
 
-    chatSocket.onclose = function () {
-        console.error('Chat socket closed unexpectedly');
-    };
+$("#profile-img").click(function () {
+    $("#status-options").toggleClass("active");
+});
 
-    document.querySelector('#chat-message-input').focus();
-    document.querySelector('#chat-message-input').onkeyup = function (e) {
-        if (e.keyCode === 13) {  // enter, return
-            document.querySelector('#chat-message-submit').click();
-        }
-    };
+$(".expand-button").click(function () {
+    $("#profile").toggleClass("expanded");
+    $("#contacts").toggleClass("expanded");
+});
 
-    document.querySelector('#chat-message-submit').onclick = function () {
-        const messageInputDom = document.querySelector('#chat-message-input');
-        if (messageInputDom.value !== "" && messageInputDom.value != null) {
-            const message = "[" + "{{ user.UserStudentId }} {{ user.UserName }}" + "] " + messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInputDom.value = '';
-        }
-    };
+$("#status-options ul li").click(function () {
+    $("#profile-img").removeClass();
+    $("#status-online").removeClass("active");
+    $("#status-away").removeClass("active");
+    $("#status-busy").removeClass("active");
+    $("#status-offline").removeClass("active");
+    $(this).addClass("active");
+
+    if ($("#status-online").hasClass("active")) {
+        $("#profile-img").addClass("online");
+    } else if ($("#status-away").hasClass("active")) {
+        $("#profile-img").addClass("away");
+    } else if ($("#status-busy").hasClass("active")) {
+        $("#profile-img").addClass("busy");
+    } else if ($("#status-offline").hasClass("active")) {
+        $("#profile-img").addClass("offline");
+    } else {
+        $("#profile-img").removeClass();
+    }
+
+
+    $("#status-options").removeClass("active");
+});
+
+function newMessage() {
+    messageDOM = document.getElementById("send_message")
+    const message = messageDOM.value;
+    if (message.trim() !== "" && message.trim() != null) {
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'email': '{{ user.email }}'
+        }));
+        messageDOM.value = '';
+
+        $('<li class="sent"><img src="http://emilcarlsson.se/assets/mikeross.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
+        $('.message-input input').val(null);
+        $('.contact.active .preview').html('<span>You: </span>' + message);
+        document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
+    } else {
+        return false;
+    }
+}
+
+chatSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    const message = data['message'];
+    const email = data['email'];
+
+    if (email !== '{{ user.email }}') {
+        $('<li class="replies"><img src="http://emilcarlsson.se/assets/harveyspecter.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
+        $('.contact.active .preview').html('<span>You: </span>' + message);
+        document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
+    }
+};
+
+chatSocket.onclose = function () {
+    console.error('Chat socket closed unexpectedly');
+}
+
+
+$('.submit').click(function () {
+    newMessage();
+});
+
+$(window).on('keydown', function (e) {
+    if (e.which === 13) {
+        newMessage();
+        return false;
+    }
+});
+//# sourceURL=pen.js
 </script>
+</body>
 </html>

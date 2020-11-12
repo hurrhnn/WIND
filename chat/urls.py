@@ -1,6 +1,6 @@
 from django.conf.urls import url
-from . import views
 
+from . import views
 
 urlpatterns = [
     url(r'^$', views.index_view, name='index'),
@@ -11,5 +11,4 @@ urlpatterns = [
     url(r'^found', views.lost_view, name='lostpassword'),
     url(r'^room/(?P<room_name>[^/]+)/$', views.chatroom_view, name='room'),
     url(r'^room', views.chatroom_index_view, name='index_room'),
-
 ]

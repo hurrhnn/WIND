@@ -141,4 +141,4 @@ cython_debug/
 
 .idea/
 venv/
-db.sqlite3
+SSL/

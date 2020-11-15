@@ -1,4 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
 {% load static %}
+
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -10,9 +13,9 @@
 <script src="{% static 'reconnecting-websocket.min.js' %}"></script>
 <!------ Include the above in your HEAD tag ---------->
 
+<script src='//production-assets.codepen.io/assets/common/stopExecutionOnTimeout-b2a7b3fe212eaa732349046d8416e00a9dec26eb7fd347590fbced3ab38af52e.js'></script>
+<script src='https://code.jquery.com/jquery-2.2.4.min.js'></script>
 
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <title>Chat Room</title>
     <meta charset='UTF-8'>
@@ -45,9 +48,369 @@
             integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
             crossorigin="anonymous"></script>
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script>
+        'use strict';
+        let chatSocket = new ReconnectingWebSocket('wss://' + window.location.host + '/ws/chat/room/' + {{ room_name }} +'/');
+
+        let isChannelReady = false;
+        let isInitiator = false;
+        let isStarted = false;
+        let localStream;
+        let pc;
+        let remoteStream;
+        let turnReady;
+
+        let pcConfig = {
+            'iceServers': [{
+                'urls': 'stun:stun.l.google.com:19302'
+            }]
+        };
+
+        // Set up audio and video regardless of what devices are present.
+        let sdpConstraints = {
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        };
+
+        isInitiator = true;
+        isChannelReady = true;
+        console.log(chatSocket);
+
+        $("#profile-img").click(function () {
+            $("#status-options").toggleClass("active");
+        });
+
+        $(".expand-button").click(function () {
+            $("#profile").toggleClass("expanded");
+            $("#contacts").toggleClass("expanded");
+        });
+
+        $("#status-options ul li").click(function () {
+            $("#profile-img").removeClass();
+            $("#status-online").removeClass("active");
+            $("#status-away").removeClass("active");
+            $("#status-busy").removeClass("active");
+            $("#status-offline").removeClass("active");
+            $(this).addClass("active");
+
+            if ($("#status-online").hasClass("active")) {
+                $("#profile-img").addClass("online");
+            } else if ($("#status-away").hasClass("active")) {
+                $("#profile-img").addClass("away");
+            } else if ($("#status-busy").hasClass("active")) {
+                $("#profile-img").addClass("busy");
+            } else if ($("#status-offline").hasClass("active")) {
+                $("#profile-img").addClass("offline");
+            } else {
+                $("#profile-img").removeClass();
+            }
+
+
+            $("#status-options").removeClass("active");
+        });
+
+        function newMessage() {
+            let messageDOM = document.getElementById("send_message")
+            const message = messageDOM.value;
+            if (message.trim() !== "" && message.trim() != null) {
+                chatSocket.send(JSON.stringify({
+                    'message': btoa('{{ user.email }}') + '/' + message,
+                }));
+                messageDOM.value = '';
+
+                $('<li class="sent"><img src="http://emilcarlsson.se/assets/mikeross.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
+                $('.message-input input').val(null);
+                $('.contact.active .preview').html('<span>You: </span>' + message);
+                document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
+            } else {
+                return false;
+            }
+        }
+
+        function sendSocketMessage(message) {
+            console.log('Client sending message: ', message);
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+        }
+
+        chatSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            let message = data['message'];
+
+            if (message === 'got user media') {
+                maybeStart();
+            } else if (message.type === 'offer') {
+                if (!isInitiator && !isStarted) {
+                    maybeStart();
+                }
+                pc.setRemoteDescription(new RTCSessionDescription(message));
+                doAnswer();
+            } else if (message.type === 'answer' && isStarted) {
+                pc.setRemoteDescription(new RTCSessionDescription(message));
+            } else if (message.type === 'candidate' && isStarted) {
+                let candidate = new RTCIceCandidate({
+                    sdpMLineIndex: message.label,
+                    candidate: message.candidate
+                });
+                pc.addIceCandidate(candidate);
+            } else if (message === 'bye' && isStarted) {
+                handleRemoteHangup();
+            } else {
+                if (message.indexOf(btoa('{{ user.email }}')) === -1) {
+                    message = message.substring(message.indexOf('/') + 1)
+                    $('<li class="replies"><img src="http://emilcarlsson.se/assets/harveyspecter.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
+                    $('.contact.active .preview').html('<span>You: </span>' + message);
+                    document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
+                }
+            }
+        }
+
+        navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false
+        }).then(gotStream)
+            .catch(function (e) {
+                alert('getUserMedia() error: ' + e.name);
+            });
+
+        function gotStream(stream) {
+            console.log('Adding local stream.');
+            localStream = stream;
+            sendSocketMessage('got user media');
+            if (isInitiator) {
+                maybeStart();
+            }
+        }
+
+        let constraints = {
+            video: true
+        };
+
+        console.log('Getting user media with constraints', constraints);
+
+        function maybeStart() {
+            console.log('>>>>>>> maybeStart() ', isStarted, localStream, isChannelReady);
+            if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
+                console.log('>>>>>> creating peer connection');
+                createPeerConnection();
+                pc.addStream(localStream);
+                isStarted = true;
+                console.log('isInitiator', isInitiator);
+                if (isInitiator) {
+                    doCall();
+                }
+            }
+        }
+
+        window.onbeforeunload = function () {
+            sendSocketMessage('bye');
+            console.log("Bye error");
+        };
+
+        function createPeerConnection() {
+            try {
+                pc = new RTCPeerConnection(null);
+                pc.onicecandidate = handleIceCandidate;
+                pc.onaddstream = handleRemoteStreamAdded;
+                pc.onremovestream = handleRemoteStreamRemoved;
+                console.log('Created RTCPeerConnnection');
+            } catch (e) {
+                console.log('Failed to create PeerConnection, exception: ' + e.message);
+                alert('Cannot create RTCPeerConnection object.');
+            }
+        }
+
+        function handleIceCandidate(event) {
+            console.log('icecandidate event: ', event);
+            if (event.candidate) {
+                sendSocketMessage({
+                    type: 'candidate',
+                    label: event.candidate.sdpMLineIndex,
+                    id: event.candidate.sdpMid,
+                    candidate: event.candidate.candidate
+                });
+            } else {
+                console.log('End of candidates.');
+            }
+        }
+
+        function handleCreateOfferError(event) {
+            console.log('createOffer() error: ', event);
+        }
+
+        function doCall() {
+            console.log('Sending offer to peer');
+            pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+        }
+
+        function doAnswer() {
+            console.log('Sending answer to peer.');
+            pc.createAnswer().then(
+                setLocalAndSendMessage,
+                onCreateSessionDescriptionError
+            );
+        }
+
+        function setLocalAndSendMessage(sessionDescription) {
+            // Set Opus as the preferred codec in SDP if Opus is present.
+            //  sessionDescription.sdp = preferOpus(sessionDescription.sdp);
+            pc.setLocalDescription(sessionDescription);
+            console.log('setLocalAndSendMessage sending message', sessionDescription);
+            sendSocketMessage(sessionDescription);
+        }
+
+        function onCreateSessionDescriptionError(error) {
+            trace('Failed to create session description: ' + error.toString());
+        }
+
+        function requestTurn(turnURL) {
+            let turnExists = false;
+            for (let i in pcConfig.iceServers) {
+                if (pcConfig.iceServers[i].urls.substr(0, 5) === 'turn:') {
+                    turnExists = true;
+                    turnReady = true;
+                    break;
+                }
+            }
+            if (!turnExists) {
+                console.log('Getting TURN server from ', turnURL);
+                // No TURN server. Get one from computeengineondemand.appspot.com:
+                let xhr = new XMLHttpRequest();
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        let turnServer = JSON.parse(xhr.responseText);
+                        console.log('Got TURN server: ', turnServer);
+                        pcConfig.iceServers.push({
+                            'urls': 'turn:' + turnServer.username + '@' + turnServer.turn,
+                            'credential': turnServer.password
+                        });
+                        turnReady = true;
+                    }
+                };
+                xhr.open('GET', turnURL, true);
+                xhr.send();
+            }
+        }
+
+        function handleRemoteStreamAdded(event) {
+            console.log('Remote stream added.');
+            remoteStream = event.stream;
+        }
+
+        chatSocket.onclose = function () {
+            console.error('Chat socket closed unexpectedly');
+        }
+
+        function handleRemoteStreamRemoved(event) {
+            console.log('Remote stream removed. Event: ', event);
+        }
+
+        function hangup() {
+            console.log('Hanging up.');
+            stop();
+            sendSocketMessage('bye');
+        }
+
+        function handleRemoteHangup() {
+            console.log('Session terminated.');
+            stop();
+            isInitiator = false;
+        }
+
+        function stop() {
+            isStarted = false;
+            pc.close();
+            pc = null;
+        }
+
+        function preferOpus(sdp) {
+            let sdpLines = sdp.split('\r\n');
+            let mLineIndex;
+            // Search for m line.
+            for (let i = 0; i < sdpLines.length; i++) {
+                if (sdpLines[i].search('m=audio') !== -1) {
+                    mLineIndex = i;
+                    break;
+                }
+            }
+            if (mLineIndex === null) {
+                return sdp;
+            }
+
+            // If Opus is available, set it as the default in m line.
+            for (let i = 0; i < sdpLines.length; i++) {
+                if (sdpLines[i].search('opus/48000') !== -1) {
+                    let opusPayload = extractSdp(sdpLines[i], /:(\d+) opus\/48000/i);
+                    if (opusPayload) {
+                        sdpLines[mLineIndex] = setDefaultCodec(sdpLines[mLineIndex],
+                            opusPayload);
+                    }
+                    break;
+                }
+            }
+
+            // Remove CN in m line and sdp.
+            sdpLines = removeCN(sdpLines, mLineIndex);
+
+            sdp = sdpLines.join('\r\n');
+            return sdp;
+        }
+
+        function extractSdp(sdpLine, pattern) {
+            let result = sdpLine.match(pattern);
+            return result && result.length === 2 ? result[1] : null;
+        }
+
+        function setDefaultCodec(mLine, payload) {
+            let elements = mLine.split(' ');
+            let newLine = [];
+            let index = 0;
+            for (let i = 0; i < elements.length; i++) {
+                if (index === 3) { // Format of media starts from the fourth.
+                    newLine[index++] = payload; // Put target payload to the first.
+                }
+                if (elements[i] !== payload) {
+                    newLine[index++] = elements[i];
+                }
+            }
+            return newLine.join(' ');
+        }
+
+        function removeCN(sdpLines, mLineIndex) {
+            let mLineElements = sdpLines[mLineIndex].split(' ');
+            // Scan from end for the convenience of removing an item.
+            for (let i = sdpLines.length - 1; i >= 0; i--) {
+                let payload = extractSdp(sdpLines[i], /a=rtpmap:(\d+) CN\/\d+/i);
+                if (payload) {
+                    let cnPos = mLineElements.indexOf(payload);
+                    if (cnPos !== -1) {
+                        // Remove CN payload from m line.
+                        mLineElements.splice(cnPos, 1);
+                    }
+                    // Remove CN line in sdp
+                    sdpLines.splice(i, 1);
+                }
+            }
+
+            sdpLines[mLineIndex] = mLineElements.join(' ');
+            return sdpLines;
+        }
+
+
+        $('.submit').click(function () {
+            newMessage();
+        });
+
+        $(window).on('keydown', function (e) {
+            if (e.which === 13) {
+                newMessage();
+                return false;
+            }
+        });
+    </script>
 </head>
 <body>
-
 <div id="frame">
     <div id="sidepanel">
         <div id="profile">
@@ -117,370 +480,6 @@
         </div>
     </div>
 </div>
-<script src='//production-assets.codepen.io/assets/common/stopExecutionOnTimeout-b2a7b3fe212eaa732349046d8416e00a9dec26eb7fd347590fbced3ab38af52e.js'></script>
-<script src='https://code.jquery.com/jquery-2.2.4.min.js'></script>
-<script>
-    'use strict';
-    let chatSocket = new ReconnectingWebSocket('wss://' + window.location.host + '/ws/chat/room/' + {{ room_name }} +'/');
-
-    let isChannelReady = false;
-    let isInitiator = false;
-    let isStarted = false;
-    let localStream;
-    let pc;
-    let remoteStream;
-    let turnReady;
-
-    let pcConfig = {
-        'iceServers': [{
-            'urls': 'stun:stun.l.google.com:19302'
-        }]
-    };
-
-    // Set up audio and video regardless of what devices are present.
-    let sdpConstraints = {
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-    };
-
-    isInitiator = true;
-    isChannelReady = true;
-    console.log(chatSocket);
-
-    document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
-
-    $("#profile-img").click(function () {
-        $("#status-options").toggleClass("active");
-    });
-
-    $(".expand-button").click(function () {
-        $("#profile").toggleClass("expanded");
-        $("#contacts").toggleClass("expanded");
-    });
-
-    $("#status-options ul li").click(function () {
-        $("#profile-img").removeClass();
-        $("#status-online").removeClass("active");
-        $("#status-away").removeClass("active");
-        $("#status-busy").removeClass("active");
-        $("#status-offline").removeClass("active");
-        $(this).addClass("active");
-
-        if ($("#status-online").hasClass("active")) {
-            $("#profile-img").addClass("online");
-        } else if ($("#status-away").hasClass("active")) {
-            $("#profile-img").addClass("away");
-        } else if ($("#status-busy").hasClass("active")) {
-            $("#profile-img").addClass("busy");
-        } else if ($("#status-offline").hasClass("active")) {
-            $("#profile-img").addClass("offline");
-        } else {
-            $("#profile-img").removeClass();
-        }
-
-
-        $("#status-options").removeClass("active");
-    });
-
-    function newMessage() {
-        let messageDOM = document.getElementById("send_message")
-        const message = messageDOM.value;
-        if (message.trim() !== "" && message.trim() != null) {
-            chatSocket.send(JSON.stringify({
-                'message': btoa('{{ user.email }}') + '/' + message,
-            }));
-            messageDOM.value = '';
-
-            $('<li class="sent"><img src="http://emilcarlsson.se/assets/mikeross.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
-            $('.message-input input').val(null);
-            $('.contact.active .preview').html('<span>You: </span>' + message);
-            document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
-        } else {
-            return false;
-        }
-    }
-
-    function sendSocketMessage(message) {
-        console.log('Client sending message: ', message);
-        chatSocket.send(JSON.stringify({
-            'message': message
-        }));
-    }
-
-    chatSocket.onmessage = function (e) {
-        const data = JSON.parse(e.data);
-        let message = data['message'];
-
-        if (message === 'got user media') {
-            maybeStart();
-        } else if (message.type === 'offer') {
-            if (!isInitiator && !isStarted) {
-                maybeStart();
-            }
-            pc.setRemoteDescription(new RTCSessionDescription(message));
-            doAnswer();
-        } else if (message.type === 'answer' && isStarted) {
-            pc.setRemoteDescription(new RTCSessionDescription(message));
-        } else if (message.type === 'candidate' && isStarted) {
-            let candidate = new RTCIceCandidate({
-                sdpMLineIndex: message.label,
-                candidate: message.candidate
-            });
-            pc.addIceCandidate(candidate);
-        } else if (message === 'bye' && isStarted) {
-            handleRemoteHangup();
-        } else {
-            if (message.indexOf(btoa('{{ user.email }}')) === -1) {
-                message = message.substring(message.indexOf('/'))
-                $('<li class="replies"><img src="http://emilcarlsson.se/assets/harveyspecter.png" alt="" /><p>' + message + '</p></li>').appendTo($('.messages ul'));
-                $('.contact.active .preview').html('<span>You: </span>' + message);
-                document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;
-            }
-        }
-    }
-
-    navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-    }).then(gotStream)
-        .catch(function (e) {
-            alert('getUserMedia() error: ' + e.name);
-        });
-
-    function gotStream(stream) {
-        console.log('Adding local stream.');
-        localStream = stream;
-        sendSocketMessage('got user media');
-        if (isInitiator) {
-            maybeStart();
-        }
-    }
-
-    let constraints = {
-        video: true
-    };
-
-    console.log('Getting user media with constraints', constraints);
-
-    function maybeStart() {
-        console.log('>>>>>>> maybeStart() ', isStarted, localStream, isChannelReady);
-        if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
-            console.log('>>>>>> creating peer connection');
-            createPeerConnection();
-            pc.addStream(localStream);
-            isStarted = true;
-            console.log('isInitiator', isInitiator);
-            if (isInitiator) {
-                doCall();
-            }
-        }
-    }
-
-    window.onbeforeunload = function () {
-        sendSocketMessage('bye');
-        console.log("Bye error");
-    };
-
-    function createPeerConnection() {
-        try {
-            pc = new RTCPeerConnection(null);
-            pc.onicecandidate = handleIceCandidate;
-            pc.onaddstream = handleRemoteStreamAdded;
-            pc.onremovestream = handleRemoteStreamRemoved;
-            console.log('Created RTCPeerConnnection');
-        } catch (e) {
-            console.log('Failed to create PeerConnection, exception: ' + e.message);
-            alert('Cannot create RTCPeerConnection object.');
-        }
-    }
-
-    function handleIceCandidate(event) {
-        console.log('icecandidate event: ', event);
-        if (event.candidate) {
-            sendSocketMessage({
-                type: 'candidate',
-                label: event.candidate.sdpMLineIndex,
-                id: event.candidate.sdpMid,
-                candidate: event.candidate.candidate
-            });
-        } else {
-            console.log('End of candidates.');
-        }
-    }
-
-    function handleCreateOfferError(event) {
-        console.log('createOffer() error: ', event);
-    }
-
-    function doCall() {
-        console.log('Sending offer to peer');
-        pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
-    }
-
-    function doAnswer() {
-        console.log('Sending answer to peer.');
-        pc.createAnswer().then(
-            setLocalAndSendMessage,
-            onCreateSessionDescriptionError
-        );
-    }
-
-    function setLocalAndSendMessage(sessionDescription) {
-        // Set Opus as the preferred codec in SDP if Opus is present.
-        //  sessionDescription.sdp = preferOpus(sessionDescription.sdp);
-        pc.setLocalDescription(sessionDescription);
-        console.log('setLocalAndSendMessage sending message', sessionDescription);
-        sendSocketMessage(sessionDescription);
-    }
-
-    function onCreateSessionDescriptionError(error) {
-        trace('Failed to create session description: ' + error.toString());
-    }
-
-    function requestTurn(turnURL) {
-        let turnExists = false;
-        for (let i in pcConfig.iceServers) {
-            if (pcConfig.iceServers[i].urls.substr(0, 5) === 'turn:') {
-                turnExists = true;
-                turnReady = true;
-                break;
-            }
-        }
-        if (!turnExists) {
-            console.log('Getting TURN server from ', turnURL);
-            // No TURN server. Get one from computeengineondemand.appspot.com:
-            let xhr = new XMLHttpRequest();
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    let turnServer = JSON.parse(xhr.responseText);
-                    console.log('Got TURN server: ', turnServer);
-                    pcConfig.iceServers.push({
-                        'urls': 'turn:' + turnServer.username + '@' + turnServer.turn,
-                        'credential': turnServer.password
-                    });
-                    turnReady = true;
-                }
-            };
-            xhr.open('GET', turnURL, true);
-            xhr.send();
-        }
-    }
-
-    function handleRemoteStreamAdded(event) {
-        console.log('Remote stream added.');
-        remoteStream = event.stream;
-    }
-
-    chatSocket.onclose = function () {
-        console.error('Chat socket closed unexpectedly');
-    }
-
-    function handleRemoteStreamRemoved(event) {
-        console.log('Remote stream removed. Event: ', event);
-    }
-
-    function hangup() {
-        console.log('Hanging up.');
-        stop();
-        sendSocketMessage('bye');
-    }
-
-    function handleRemoteHangup() {
-        console.log('Session terminated.');
-        stop();
-        isInitiator = false;
-    }
-
-    function stop() {
-        isStarted = false;
-        pc.close();
-        pc = null;
-    }
-
-    function preferOpus(sdp) {
-        let sdpLines = sdp.split('\r\n');
-        let mLineIndex;
-        // Search for m line.
-        for (let i = 0; i < sdpLines.length; i++) {
-            if (sdpLines[i].search('m=audio') !== -1) {
-                mLineIndex = i;
-                break;
-            }
-        }
-        if (mLineIndex === null) {
-            return sdp;
-        }
-
-        // If Opus is available, set it as the default in m line.
-        for (let i = 0; i < sdpLines.length; i++) {
-            if (sdpLines[i].search('opus/48000') !== -1) {
-                let opusPayload = extractSdp(sdpLines[i], /:(\d+) opus\/48000/i);
-                if (opusPayload) {
-                    sdpLines[mLineIndex] = setDefaultCodec(sdpLines[mLineIndex],
-                        opusPayload);
-                }
-                break;
-            }
-        }
-
-        // Remove CN in m line and sdp.
-        sdpLines = removeCN(sdpLines, mLineIndex);
-
-        sdp = sdpLines.join('\r\n');
-        return sdp;
-    }
-
-    function extractSdp(sdpLine, pattern) {
-        let result = sdpLine.match(pattern);
-        return result && result.length === 2 ? result[1] : null;
-    }
-
-    function setDefaultCodec(mLine, payload) {
-        let elements = mLine.split(' ');
-        let newLine = [];
-        let index = 0;
-        for (let i = 0; i < elements.length; i++) {
-            if (index === 3) { // Format of media starts from the fourth.
-                newLine[index++] = payload; // Put target payload to the first.
-            }
-            if (elements[i] !== payload) {
-                newLine[index++] = elements[i];
-            }
-        }
-        return newLine.join(' ');
-    }
-
-    function removeCN(sdpLines, mLineIndex) {
-        let mLineElements = sdpLines[mLineIndex].split(' ');
-        // Scan from end for the convenience of removing an item.
-        for (let i = sdpLines.length - 1; i >= 0; i--) {
-            let payload = extractSdp(sdpLines[i], /a=rtpmap:(\d+) CN\/\d+/i);
-            if (payload) {
-                let cnPos = mLineElements.indexOf(payload);
-                if (cnPos !== -1) {
-                    // Remove CN payload from m line.
-                    mLineElements.splice(cnPos, 1);
-                }
-                // Remove CN line in sdp
-                sdpLines.splice(i, 1);
-            }
-        }
-
-        sdpLines[mLineIndex] = mLineElements.join(' ');
-        return sdpLines;
-    }
-
-
-    $('.submit').click(function () {
-        newMessage();
-    });
-
-    $(window).on('keydown', function (e) {
-        if (e.which === 13) {
-            newMessage();
-            return false;
-        }
-    });
-</script>
+<script>document.getElementsByClassName("messages")[0].scrollTop = document.getElementsByClassName("messages")[0].scrollHeight;</script>
 </body>
 </html>

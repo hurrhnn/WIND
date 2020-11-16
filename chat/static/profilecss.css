@@ -39,18 +39,16 @@ body {
 
 .wrapper .left {
     width: 35%;
-    background: linear-gradient(to right, #01a9ac, #01dbdf);
-    padding: 30px 25px;
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
-    text-align: center;
+    height: 100%;
+    background: #8bcdcd;
+    padding: 35px 35px 35px 35px;
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
     color: #fff;
 }
 
 .wrapper .left img {
     width: fit-content;
-    border-radius: 5px;
-    margin-bottom: 10px;
 }
 
 .wrapper .left h4 {
@@ -64,8 +62,8 @@ body {
 
 .wrapper .right {
     width: 65%;
-    background: #fff;
-    padding: 30px 25px;
+    background: #d9e4dd;
+    padding: 30px 30px;
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
 }
@@ -92,8 +90,6 @@ body {
 
 .wrapper .right .info_data,
 .wrapper .right .projects_data {
-
-
     display: flex;
     justify-content: space-between;
 }
@@ -116,36 +112,15 @@ body {
     color: #919aa3;
 }
 
-.wrapper .social_media ul {
-    display: flex;
-}
-
-.wrapper .social_media ul li {
-    width: 45px;
-    height: 45px;
-    background: linear-gradient(to right, #01a9ac, #01dbdf);
-    margin-right: 10px;
-    border-radius: 5px;
-    text-align: center;
-    line-height: 45px;
-}
-
-.wrapper .social_media ul li a {
-    color: #fff;
-    display: block;
-    font-size: 18px;
-}
-
 .update {
-    position: relative;
-    top: 400px;
-    left: 700px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
     width: 70px;
     height: 45px;
+
     font-weight: bold;
-    background: linear-gradient(to right, #01a9ac, #01dbdf);
-    margin-right: 10px;
+    background: #fa7f72;
     border-radius: 5px;
     text-align: center;
-    line-height: 45px;
 }
